@@ -49,3 +49,40 @@ def test_session_store_delete_session() -> None:
 
     reloaded = SessionStore(store_path)
     assert reloaded.list() == []
+
+
+def test_session_store_persists_running_state() -> None:
+    test_dir = Path(".test-data")
+    test_dir.mkdir(exist_ok=True)
+    store_path = test_dir / f"sessions-{uuid4().hex}.json"
+    store = SessionStore(store_path)
+    session = store.create()
+
+    store.start_run(session.id)
+    store.append_pending_assistant(session.id, "partial reply")
+
+    reloaded = SessionStore(store_path)
+    session_after = reloaded.get(session.id)
+
+    assert session_after.run_status == "running"
+    assert session_after.pending_assistant_content == "partial reply"
+    assert session_after.run_error is None
+
+
+def test_session_store_finish_run_appends_assistant_message() -> None:
+    test_dir = Path(".test-data")
+    test_dir.mkdir(exist_ok=True)
+    store_path = test_dir / f"sessions-{uuid4().hex}.json"
+    store = SessionStore(store_path)
+    session = store.create()
+
+    store.start_run(session.id)
+    store.append_pending_assistant(session.id, "partial reply")
+    message = store.finish_run(session.id, "final reply")
+
+    session_after = store.get(session.id)
+
+    assert message.role == "assistant"
+    assert session_after.run_status == "idle"
+    assert session_after.pending_assistant_content == ""
+    assert session_after.messages[-1].content == "final reply"

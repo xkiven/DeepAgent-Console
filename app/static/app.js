@@ -1,6 +1,7 @@
 const state = {
   sessionId: null,
   streamingAssistantId: null,
+  refreshTimer: null,
 };
 
 const STORAGE_KEY = "pydantic-ai-web-console:session-id";
@@ -32,7 +33,7 @@ async function init() {
     fetchJson("/api/sessions"),
   ]);
 
-  els.runtimeMode.textContent = `运行模式：${config.llm_mode}`;
+  els.runtimeMode.textContent = `运行模式: ${config.llm_mode}`;
   renderSkills(skills);
   renderMcpServers(mcpServers);
 
@@ -70,6 +71,7 @@ async function onSubmit(event) {
   const message = els.chatInput.value.trim();
   if (!message) return;
 
+  stopSessionRefresh();
   appendMessage({ role: "user", content: message });
   els.chatInput.value = "";
   setStatus("running", "执行中");
@@ -133,9 +135,12 @@ async function createSession() {
 async function loadSession(sessionId) {
   state.sessionId = sessionId;
   state.streamingAssistantId = null;
+  stopSessionRefresh();
   localStorage.setItem(STORAGE_KEY, sessionId);
   const session = await fetchJson(`/api/sessions/${sessionId}`);
   renderMessages(session.messages);
+  syncPendingAssistant(session);
+  syncRunState(session);
   await refreshSessions(sessionId);
 }
 
@@ -167,7 +172,7 @@ async function deleteSession(sessionId) {
     const created = await createSession();
     await refreshSessions(created.id);
     await loadSession(created.id);
-    setStatus("idle", "已删除，已新建空会话");
+    setStatus("idle", "已删除，并新建空会话");
     return;
   }
 
@@ -233,7 +238,20 @@ function appendMessage(message) {
   els.messages.scrollTop = els.messages.scrollHeight;
 }
 
+function syncPendingAssistant(session) {
+  if (session.run_status !== "running" || !session.pending_assistant_content) {
+    return;
+  }
+  startStreamingAssistant();
+  replaceStreamingAssistant(session.pending_assistant_content);
+}
+
 function startStreamingAssistant() {
+  const existing = state.streamingAssistantId
+    ? document.querySelector(`[data-id="${state.streamingAssistantId}"]`)
+    : null;
+  if (existing) return;
+
   const div = document.createElement("div");
   state.streamingAssistantId = `assistant-${Date.now()}`;
   div.dataset.id = state.streamingAssistantId;
@@ -244,17 +262,81 @@ function startStreamingAssistant() {
 }
 
 function appendAssistantToken(token) {
-  const node = document.querySelector(`[data-id="${state.streamingAssistantId}"]`);
+  let node = document.querySelector(`[data-id="${state.streamingAssistantId}"]`);
+  if (!node) {
+    startStreamingAssistant();
+    node = document.querySelector(`[data-id="${state.streamingAssistantId}"]`);
+  }
   if (!node) return;
   node.textContent += token;
   els.messages.scrollTop = els.messages.scrollHeight;
 }
 
 function replaceStreamingAssistant(content) {
-  const node = document.querySelector(`[data-id="${state.streamingAssistantId}"]`);
+  let node = document.querySelector(`[data-id="${state.streamingAssistantId}"]`);
+  if (!node) {
+    startStreamingAssistant();
+    node = document.querySelector(`[data-id="${state.streamingAssistantId}"]`);
+  }
   if (!node) return;
   node.textContent = content;
   els.messages.scrollTop = els.messages.scrollHeight;
+}
+
+function syncRunState(session) {
+  if (session.run_status === "running") {
+    setStatus("running", "执行中");
+    startSessionRefresh(session.id);
+    return;
+  }
+  if (session.run_status === "error") {
+    setStatus("error", session.run_error || "执行失败");
+    state.streamingAssistantId = null;
+    return;
+  }
+  setStatus("idle", "空闲");
+  state.streamingAssistantId = null;
+}
+
+function startSessionRefresh(sessionId) {
+  stopSessionRefresh();
+  state.refreshTimer = window.setInterval(async () => {
+    if (state.sessionId !== sessionId) {
+      stopSessionRefresh();
+      return;
+    }
+
+    try {
+      const session = await fetchJson(`/api/sessions/${sessionId}`);
+      renderMessages(session.messages);
+      syncPendingAssistant(session);
+
+      if (session.run_status === "running") {
+        setStatus("running", "执行中");
+        return;
+      }
+
+      if (session.run_status === "error") {
+        setStatus("error", session.run_error || "执行失败");
+      } else {
+        setStatus("idle", "空闲");
+      }
+      state.streamingAssistantId = null;
+      stopSessionRefresh();
+      await refreshSessions(sessionId);
+    } catch (error) {
+      console.error(error);
+      setStatus("error", "同步失败");
+      stopSessionRefresh();
+    }
+  }, 1000);
+}
+
+function stopSessionRefresh() {
+  if (state.refreshTimer) {
+    window.clearInterval(state.refreshTimer);
+    state.refreshTimer = null;
+  }
 }
 
 function setStatus(kind, text) {

@@ -21,6 +21,9 @@ class SessionState:
     messages: list[ChatMessage] = field(default_factory=list)
     tool_logs: list[ToolLogEntry] = field(default_factory=list)
     model_history: list[ModelMessage] = field(default_factory=list)
+    run_status: str = "idle"
+    pending_assistant_content: str = ""
+    run_error: str | None = None
 
 
 class PersistedSessionRecord(BaseModel):
@@ -31,6 +34,9 @@ class PersistedSessionRecord(BaseModel):
     messages: list[ChatMessage] = []
     tool_logs: list[ToolLogEntry] = []
     model_history_json: str = "[]"
+    run_status: str = "idle"
+    pending_assistant_content: str = ""
+    run_error: str | None = None
 
 
 class PersistedSessionStore(BaseModel):
@@ -94,6 +100,9 @@ class SessionStore:
             message_count=len(state.messages),
             messages=list(state.messages),
             tool_logs=list(state.tool_logs),
+            run_status=state.run_status,
+            pending_assistant_content=state.pending_assistant_content,
+            run_error=state.run_error,
         )
 
     def add_message(self, session_id: str, role: str, content: str) -> ChatMessage:
@@ -117,6 +126,53 @@ class SessionStore:
         state.updated_at = entry.timestamp
         self._save()
         return entry
+
+    def start_run(self, session_id: str) -> None:
+        state = self._require(session_id)
+        state.run_status = "running"
+        state.pending_assistant_content = ""
+        state.run_error = None
+        state.updated_at = datetime.now(UTC)
+        self._save()
+
+    def append_pending_assistant(self, session_id: str, content: str) -> None:
+        if not content:
+            return
+        state = self._require(session_id)
+        state.pending_assistant_content += content
+        state.updated_at = datetime.now(UTC)
+        self._save()
+
+    def finish_run(self, session_id: str, content: str) -> ChatMessage:
+        state = self._require(session_id)
+        message = ChatMessage(
+            id=str(uuid4()),
+            role="assistant",
+            content=content,
+            created_at=datetime.now(UTC),
+        )
+        state.messages.append(message)
+        state.pending_assistant_content = ""
+        state.run_status = "idle"
+        state.run_error = None
+        state.updated_at = message.created_at
+        self._save()
+        return message
+
+    def fail_run(self, session_id: str, error: str) -> None:
+        state = self._require(session_id)
+        state.run_status = "error"
+        state.run_error = error
+        state.updated_at = datetime.now(UTC)
+        self._save()
+
+    def clear_run_state(self, session_id: str) -> None:
+        state = self._require(session_id)
+        state.run_status = "idle"
+        state.pending_assistant_content = ""
+        state.run_error = None
+        state.updated_at = datetime.now(UTC)
+        self._save()
 
     def get_model_history(self, session_id: str) -> list[ModelMessage]:
         state = self._require(session_id)
@@ -148,6 +204,9 @@ class SessionStore:
                 messages=list(record.messages),
                 tool_logs=list(record.tool_logs),
                 model_history=list(history),
+                run_status=record.run_status,
+                pending_assistant_content=record.pending_assistant_content,
+                run_error=record.run_error,
             )
 
     def _save(self) -> None:
@@ -162,6 +221,9 @@ class SessionStore:
                     messages=list(state.messages),
                     tool_logs=list(state.tool_logs),
                     model_history_json=ModelMessagesTypeAdapter.dump_json(state.model_history).decode("utf-8"),
+                    run_status=state.run_status,
+                    pending_assistant_content=state.pending_assistant_content,
+                    run_error=state.run_error,
                 )
                 for state in self._sessions.values()
             ]

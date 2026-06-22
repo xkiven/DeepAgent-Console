@@ -1,5 +1,6 @@
 const state = {
   sessionId: null,
+  refreshTimer: null,
 };
 
 const STORAGE_KEY = "pydantic-ai-web-console:session-id";
@@ -29,12 +30,16 @@ async function init() {
 
 async function loadSession(sessionId) {
   state.sessionId = sessionId;
+  stopRefresh();
   localStorage.setItem(STORAGE_KEY, sessionId);
   const session = await fetchJson(`/api/sessions/${sessionId}`);
-  els.sessionTitle.textContent = `当前会话：${session.title}`;
+  els.sessionTitle.textContent = buildSessionTitle(session);
   renderToolLogs(session.tool_logs);
   const sessions = await fetchJson("/api/sessions");
   renderSessionList(sessions, sessionId);
+  if (session.run_status === "running") {
+    startRefresh(sessionId);
+  }
 }
 
 function renderSessionList(items, activeId) {
@@ -71,6 +76,44 @@ function renderToolLogs(logs) {
     `;
     els.toolLogs.appendChild(div);
   }
+}
+
+function startRefresh(sessionId) {
+  stopRefresh();
+  state.refreshTimer = window.setInterval(async () => {
+    if (state.sessionId !== sessionId) {
+      stopRefresh();
+      return;
+    }
+    try {
+      const session = await fetchJson(`/api/sessions/${sessionId}`);
+      els.sessionTitle.textContent = buildSessionTitle(session);
+      renderToolLogs(session.tool_logs);
+      if (session.run_status !== "running") {
+        stopRefresh();
+      }
+    } catch (error) {
+      console.error(error);
+      stopRefresh();
+    }
+  }, 1000);
+}
+
+function stopRefresh() {
+  if (state.refreshTimer) {
+    window.clearInterval(state.refreshTimer);
+    state.refreshTimer = null;
+  }
+}
+
+function buildSessionTitle(session) {
+  if (session.run_status === "running") {
+    return `当前会话: ${session.title}（执行中）`;
+  }
+  if (session.run_status === "error") {
+    return `当前会话: ${session.title}（失败）`;
+  }
+  return `当前会话: ${session.title}`;
 }
 
 async function fetchJson(url, options) {

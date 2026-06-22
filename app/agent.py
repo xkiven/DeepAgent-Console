@@ -286,6 +286,8 @@ class AgentRuntime:
         self.skill_summaries = discover_skills(settings.skills_dir)
         self.skill_map = {skill.name: Path(skill.path) for skill in self.skill_summaries}
         self.agent = self._build_agent()
+        self._run_tasks: dict[str, asyncio.Task[None]] = {}
+        self._subscribers: dict[str, list[asyncio.Queue[dict[str, Any]]]] = {}
 
     def _build_agent(self) -> Agent[None, str]:
         agent = Agent(
@@ -312,34 +314,15 @@ class AgentRuntime:
         return agent
 
     async def stream_chat(self, session_id: str, user_message: str) -> AsyncIterator[dict[str, Any]]:
+        if session_id in self._run_tasks:
+            raise RuntimeError("A response is already running for this session.")
         self.session_store.add_message(session_id, "user", user_message)
-        history = self.session_store.get_model_history(session_id)
-        queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        queue = self._subscribe(session_id)
+        self.session_store.start_run(session_id)
+        await self._publish(session_id, {"type": "status", "content": "running"})
 
-        yield {"type": "status", "content": "running"}
-
-        async def event_handler(_: Any, events: AsyncIterator[AgentStreamEvent]) -> None:
-            async for event in events:
-                item = self._map_event(session_id, event)
-                if item is not None:
-                    await queue.put(item)
-
-        async def run_agent() -> None:
-            try:
-                result = await self.agent.run(
-                    user_message,
-                    message_history=history,
-                    event_stream_handler=event_handler,
-                )
-                self.session_store.set_model_history(session_id, result.all_messages())
-                assistant_message = self.session_store.add_message(session_id, "assistant", str(result.output))
-                await queue.put({"type": "message", "content": assistant_message.model_dump(mode="json")})
-            except Exception as exc:  # noqa: BLE001
-                await queue.put({"type": "error", "content": str(exc)})
-            finally:
-                await queue.put({"type": "done", "content": "complete"})
-
-        task = asyncio.create_task(run_agent())
+        task = asyncio.create_task(self._run_agent(session_id, user_message))
+        self._run_tasks[session_id] = task
         try:
             while True:
                 item = await queue.get()
@@ -347,13 +330,84 @@ class AgentRuntime:
                 if item["type"] == "done":
                     break
         finally:
-            await task
+            self._unsubscribe(session_id, queue)
+
+    async def stream_session(self, session_id: str) -> AsyncIterator[dict[str, Any]]:
+        queue = self._subscribe(session_id)
+        session = self.session_store.get(session_id)
+        if session.run_status == "running":
+            yield {"type": "status", "content": "running"}
+            if session.pending_assistant_content:
+                yield {"type": "message", "content": {"content": session.pending_assistant_content, "pending": True}}
+        elif session.run_status == "error" and session.run_error:
+            yield {"type": "error", "content": session.run_error}
+            yield {"type": "done", "content": "complete"}
+            self._unsubscribe(session_id, queue)
+            return
+        else:
+            yield {"type": "done", "content": "complete"}
+            self._unsubscribe(session_id, queue)
+            return
+
+        try:
+            while True:
+                item = await queue.get()
+                yield item
+                if item["type"] == "done":
+                    break
+        finally:
+            self._unsubscribe(session_id, queue)
+
+    async def _run_agent(self, session_id: str, user_message: str) -> None:
+        history = self.session_store.get_model_history(session_id)
+
+        async def event_handler(_: Any, events: AsyncIterator[AgentStreamEvent]) -> None:
+            async for event in events:
+                item = self._map_event(session_id, event)
+                if item is not None:
+                    await self._publish(session_id, item)
+
+        try:
+            result = await self.agent.run(
+                user_message,
+                message_history=history,
+                event_stream_handler=event_handler,
+            )
+            self.session_store.set_model_history(session_id, result.all_messages())
+            assistant_message = self.session_store.finish_run(session_id, str(result.output))
+            await self._publish(session_id, {"type": "message", "content": assistant_message.model_dump(mode="json")})
+        except Exception as exc:  # noqa: BLE001
+            self.session_store.fail_run(session_id, str(exc))
+            await self._publish(session_id, {"type": "error", "content": str(exc)})
+        finally:
+            self._run_tasks.pop(session_id, None)
+            await self._publish(session_id, {"type": "done", "content": "complete"})
+
+    def _subscribe(self, session_id: str) -> asyncio.Queue[dict[str, Any]]:
+        queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        self._subscribers.setdefault(session_id, []).append(queue)
+        return queue
+
+    def _unsubscribe(self, session_id: str, queue: asyncio.Queue[dict[str, Any]]) -> None:
+        subscribers = self._subscribers.get(session_id)
+        if not subscribers:
+            return
+        if queue in subscribers:
+            subscribers.remove(queue)
+        if not subscribers:
+            self._subscribers.pop(session_id, None)
+
+    async def _publish(self, session_id: str, item: dict[str, Any]) -> None:
+        for queue in list(self._subscribers.get(session_id, [])):
+            await queue.put(item)
 
     def _map_event(self, session_id: str, event: AgentStreamEvent) -> dict[str, Any] | None:
         if isinstance(event, PartStartEvent) and isinstance(event.part, TextPart) and event.part.content:
+            self.session_store.append_pending_assistant(session_id, event.part.content)
             return {"type": "token", "content": event.part.content}
 
         if isinstance(event, PartDeltaEvent) and isinstance(event.delta, TextPartDelta) and event.delta.content_delta:
+            self.session_store.append_pending_assistant(session_id, event.delta.content_delta)
             return {"type": "token", "content": event.delta.content_delta}
 
         if isinstance(event, FunctionToolCallEvent):

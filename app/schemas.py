@@ -50,9 +50,11 @@ class SessionSummary(BaseModel):
 class SessionDetail(SessionSummary):
     messages: list[ChatMessage]
     tool_logs: list[ToolLogEntry]
+    run_status: Literal["idle", "running", "error"] = "idle"
+    pending_assistant_content: str = ""
+    run_error: str | None = None
 
 
 class ChatRequest(BaseModel):
     session_id: str
     message: str
-
