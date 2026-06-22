@@ -1,0 +1,11 @@
+.venv/
+.idea/
+.pytest_cache/
+.test-data/
+.data/
+__pycache__/
+*.pyc
+
+.env
+
+pip-install*.log
