@@ -1,0 +1,375 @@
+:root {
+  --bg: #f3efe5;
+  --bg-strong: #efe6d4;
+  --surface: rgba(255, 252, 245, 0.92);
+  --surface-strong: #fffaf0;
+  --line: #d7c9ab;
+  --text: #1f1c17;
+  --muted: #6a6255;
+  --accent: #0c6c61;
+  --accent-soft: #d8efe6;
+  --danger: #9e3d1f;
+  --user: #0d5c94;
+  --assistant: #7c4f19;
+  --shadow: 0 16px 32px rgba(76, 59, 33, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  overflow: hidden;
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, #fff7dc 0, transparent 30%),
+    radial-gradient(circle at bottom right, #dbeee3 0, transparent 26%),
+    linear-gradient(135deg, var(--bg), var(--bg-strong));
+}
+
+.shell {
+  display: grid;
+  gap: 20px;
+  padding: 20px;
+  height: 100vh;
+}
+
+.shell-chat {
+  grid-template-columns: 360px minmax(0, 1fr);
+}
+
+.shell-logs {
+  grid-template-columns: 320px minmax(0, 1fr);
+}
+
+.sidebar,
+.main {
+  min-height: 0;
+}
+
+.sidebar {
+  display: grid;
+  gap: 20px;
+  grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.main {
+  display: grid;
+  gap: 20px;
+}
+
+.main-chat {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.main-logs {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  min-height: 0;
+}
+
+.brand h1,
+.panel h2 {
+  margin: 0;
+}
+
+.brand h1 {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.panel-subtitle {
+  margin-bottom: 12px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.nav-link.active {
+  color: white;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.stack {
+  display: grid;
+  gap: 10px;
+}
+
+.scroll-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.scroll-stack,
+.messages,
+.logs-page {
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: var(--surface-strong);
+}
+
+.card h3,
+.card p {
+  margin: 0;
+}
+
+.card p + p {
+  margin-top: 6px;
+}
+
+.session-item {
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+
+.session-item.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.session-item:hover {
+  transform: translateY(-1px);
+}
+
+.ghost-btn,
+#send-btn {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ghost-btn {
+  background: transparent;
+}
+
+#send-btn {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.chat-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  height: 100%;
+}
+
+.messages {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.message {
+  border-radius: 18px;
+  padding: 14px 16px;
+  max-width: min(78ch, 88%);
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.message.user {
+  justify-self: end;
+  background: rgba(13, 92, 148, 0.11);
+  border: 1px solid rgba(13, 92, 148, 0.24);
+}
+
+.message.assistant {
+  background: rgba(124, 79, 25, 0.1);
+  border: 1px solid rgba(124, 79, 25, 0.22);
+}
+
+.composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 14px;
+}
+
+#chat-input {
+  resize: none;
+  min-height: 92px;
+  max-height: 180px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.7);
+  font: inherit;
+}
+
+.status-pill {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.status-pill.idle {
+  background: #ebe6dc;
+  color: var(--muted);
+}
+
+.status-pill.running {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.status-pill.error {
+  background: #f6ddd4;
+  color: var(--danger);
+}
+
+.tool-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 12px;
+  background: #efe8d5;
+  color: #5e533f;
+}
+
+.connected {
+  color: var(--accent);
+}
+
+.disconnected {
+  color: var(--danger);
+}
+
+.logs-page-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  height: 100%;
+}
+
+.log-card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.48);
+  margin-bottom: 12px;
+}
+
+.log-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.log-content {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.empty-state {
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  padding: 20px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.35);
+}
+
+@media (max-width: 960px) {
+  body {
+    overflow: auto;
+  }
+
+  .shell,
+  .shell-chat,
+  .shell-logs {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .main,
+  .main-chat,
+  .main-logs {
+    grid-template-rows: auto;
+  }
+
+  .chat-panel,
+  .logs-page-panel {
+    height: auto;
+  }
+
+  .messages,
+  .logs-page,
+  .scroll-stack {
+    max-height: none;
+  }
+
+  .message {
+    max-width: 100%;
+  }
+}

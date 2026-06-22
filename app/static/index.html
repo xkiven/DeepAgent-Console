@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeepAgents 智能体控制台</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="shell shell-chat">
+      <aside class="sidebar">
+        <div class="panel brand">
+          <div class="eyebrow">DeepAgents</div>
+          <h1>智能体控制台</h1>
+          <p id="runtime-mode" class="muted"></p>
+          <div class="nav-links">
+            <a class="nav-link active" href="/">对话</a>
+            <a class="nav-link" href="/logs">工具日志</a>
+          </div>
+        </div>
+
+        <div class="panel scroll-panel">
+          <div class="panel-head">
+            <h2>会话</h2>
+            <button id="new-session-btn" class="ghost-btn">新建</button>
+          </div>
+          <div id="session-list" class="stack scroll-stack"></div>
+        </div>
+
+        <div class="panel scroll-panel">
+          <div class="panel-head">
+            <h2>技能</h2>
+          </div>
+          <div id="skills-list" class="stack scroll-stack"></div>
+        </div>
+
+        <div class="panel scroll-panel">
+          <div class="panel-head">
+            <h2>MCP 服务</h2>
+          </div>
+          <div id="mcp-list" class="stack scroll-stack"></div>
+        </div>
+      </aside>
+
+      <main class="main main-chat">
+        <section class="panel chat-panel">
+          <div class="panel-head">
+            <h2>对话</h2>
+            <button id="reset-session-btn" class="ghost-btn">重置会话</button>
+          </div>
+          <div id="chat-status" class="status-pill idle">空闲</div>
+          <div id="messages" class="messages"></div>
+          <form id="chat-form" class="composer">
+            <textarea id="chat-input" rows="3" placeholder="试试：总结这段文本、查看 code-review skill、现在时间是什么？"></textarea>
+            <button id="send-btn" type="submit">发送</button>
+          </form>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/app.js" type="module"></script>
+  </body>
+</html>

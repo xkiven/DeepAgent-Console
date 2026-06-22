@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeepAgents 工具日志</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="shell shell-logs">
+      <aside class="sidebar">
+        <div class="panel brand">
+          <div class="eyebrow">DeepAgents</div>
+          <h1>工具日志</h1>
+          <p class="muted">查看每个会话的工具调用过程与执行输出。</p>
+          <div class="nav-links">
+            <a class="nav-link" href="/">对话</a>
+            <a class="nav-link active" href="/logs">工具日志</a>
+          </div>
+        </div>
+
+        <div class="panel scroll-panel">
+          <div class="panel-head">
+            <h2>会话</h2>
+          </div>
+          <div id="session-list" class="stack scroll-stack"></div>
+        </div>
+      </aside>
+
+      <main class="main main-logs">
+        <section class="panel logs-page-panel">
+          <div class="panel-head">
+            <h2>执行过程</h2>
+          </div>
+          <div id="log-session-title" class="muted panel-subtitle">请选择一个会话</div>
+          <div id="tool-logs" class="logs logs-page"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/logs.js" type="module"></script>
+  </body>
+</html>
