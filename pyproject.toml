@@ -28,3 +28,12 @@ dev = [
 testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "-p no:cacheprovider"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["app", "app.*"]
+
+[tool.setuptools.package-data]
+app = ["static/*"]
