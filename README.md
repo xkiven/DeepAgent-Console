@@ -299,8 +299,10 @@ ARK_MODEL=doubao-seed-2-0-lite-260215
 进入页面后可尝试：
 
 - `请展示可用的 skill，并看看 code-review skill 适合做什么`
-- `帮我做一次代码评审，下面这段 python 代码：...`
-- `帮我总结下面这段文本：...`
+- `帮我做一次代码评审，下面这段python代码：
+def calc_price(num):
+    return num * 10`
+- `基于刚才的问题，补充更多极端边界测试`
 - `现在时间是什么？`
 
 ## 已知限制
