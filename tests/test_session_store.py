@@ -35,3 +35,17 @@ def test_session_store_persists_sessions() -> None:
     assert session_after.messages[1].content == "世界"
     assert session_after.tool_logs[0].name == "read_skill"
     assert len(reloaded.get_model_history(session.id)) == 1
+
+
+def test_session_store_delete_session() -> None:
+    test_dir = Path(".test-data")
+    test_dir.mkdir(exist_ok=True)
+    store_path = test_dir / f"sessions-{uuid4().hex}.json"
+    store = SessionStore(store_path)
+    session = store.create()
+    store.add_message(session.id, "user", "要删除的会话")
+
+    store.delete(session.id)
+
+    reloaded = SessionStore(store_path)
+    assert reloaded.list() == []

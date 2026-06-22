@@ -16,6 +16,7 @@ const els = {
   chatInput: document.querySelector("#chat-input"),
   newSessionBtn: document.querySelector("#new-session-btn"),
   resetSessionBtn: document.querySelector("#reset-session-btn"),
+  deleteSessionBtn: document.querySelector("#delete-session-btn"),
 };
 
 init().catch((error) => {
@@ -56,6 +57,9 @@ async function init() {
     await fetchJson(`/api/sessions/${state.sessionId}/reset`, { method: "POST" });
     await loadSession(state.sessionId);
     await refreshSessions(state.sessionId);
+  });
+  els.deleteSessionBtn.addEventListener("click", async () => {
+    await window.__deleteCurrentSession();
   });
 }
 
@@ -143,16 +147,42 @@ async function refreshSessions(activeId) {
 function renderSessionList(items, activeId = state.sessionId) {
   els.sessionList.innerHTML = "";
   for (const item of items) {
-    const div = document.createElement("button");
-    div.className = `card session-item${item.id === activeId ? " active" : ""}`;
-    div.innerHTML = `
+    const button = document.createElement("button");
+    button.className = `card session-item${item.id === activeId ? " active" : ""}`;
+    button.type = "button";
+    button.innerHTML = `
       <h3>${escapeHtml(item.title)}</h3>
       <p class="muted">${item.message_count} 条消息</p>
     `;
-    div.addEventListener("click", () => loadSession(item.id));
-    els.sessionList.appendChild(div);
+    button.addEventListener("click", () => loadSession(item.id));
+    els.sessionList.appendChild(button);
   }
 }
+
+async function deleteSession(sessionId) {
+  await fetchJson(`/api/sessions/${sessionId}`, { method: "DELETE" });
+  const sessions = await fetchJson("/api/sessions");
+  if (sessions.length === 0) {
+    localStorage.removeItem(STORAGE_KEY);
+    const created = await createSession();
+    await refreshSessions(created.id);
+    await loadSession(created.id);
+    setStatus("idle", "已删除，已新建空会话");
+    return;
+  }
+
+  const next = sessions.find((session) => session.id !== sessionId) || sessions[0];
+  await refreshSessions(next.id);
+  await loadSession(next.id);
+  setStatus("idle", "当前会话已删除");
+}
+
+window.__deleteCurrentSession = async function deleteCurrentSession() {
+  if (!state.sessionId) return;
+  const confirmed = window.confirm("确定删除当前会话吗？该会话的消息和工具日志都会被移除。");
+  if (!confirmed) return;
+  await deleteSession(state.sessionId);
+};
 
 function renderSkills(skills) {
   els.skillsList.innerHTML = "";

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>DeepAgents 智能体控制台</title>
-    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260622-1" />
   </head>
   <body>
     <div class="shell shell-chat">
@@ -46,7 +46,10 @@
         <section class="panel chat-panel">
           <div class="panel-head">
             <h2>对话</h2>
-            <button id="reset-session-btn" class="ghost-btn">重置会话</button>
+            <div class="panel-actions">
+              <button id="delete-session-btn" class="ghost-btn danger-btn" type="button" onclick="window.__deleteCurrentSession && window.__deleteCurrentSession()">删除会话</button>
+              <button id="reset-session-btn" class="ghost-btn">重置会话</button>
+            </div>
           </div>
           <div id="chat-status" class="status-pill idle">空闲</div>
           <div id="messages" class="messages"></div>
@@ -58,6 +61,6 @@
       </main>
     </div>
 
-    <script src="/static/app.js" type="module"></script>
+    <script src="/static/app.js?v=20260622-1" type="module"></script>
   </body>
 </html>

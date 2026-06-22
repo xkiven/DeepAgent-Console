@@ -40,14 +40,15 @@ async function loadSession(sessionId) {
 function renderSessionList(items, activeId) {
   els.sessionList.innerHTML = "";
   for (const item of items) {
-    const div = document.createElement("button");
-    div.className = `card session-item${item.id === activeId ? " active" : ""}`;
-    div.innerHTML = `
+    const button = document.createElement("button");
+    button.className = `card session-item${item.id === activeId ? " active" : ""}`;
+    button.type = "button";
+    button.innerHTML = `
       <h3>${escapeHtml(item.title)}</h3>
       <p class="muted">${item.message_count} 条消息</p>
     `;
-    div.addEventListener("click", () => loadSession(item.id));
-    els.sessionList.appendChild(div);
+    button.addEventListener("click", () => loadSession(item.id));
+    els.sessionList.appendChild(button);
   }
 }
 

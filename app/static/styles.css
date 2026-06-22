@@ -114,6 +114,12 @@ body {
   margin-bottom: 14px;
 }
 
+.panel-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .panel-subtitle {
   margin-bottom: 12px;
 }
@@ -174,6 +180,9 @@ body {
 }
 
 .session-item {
+  text-align: left;
+  width: 100%;
+  text-align: left;
   cursor: pointer;
   transition: transform 120ms ease, border-color 120ms ease;
 }
@@ -198,6 +207,10 @@ body {
 
 .ghost-btn {
   background: transparent;
+}
+
+.danger-btn {
+  color: var(--danger);
 }
 
 #send-btn {

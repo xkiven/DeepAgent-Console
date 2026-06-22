@@ -66,6 +66,11 @@ class SessionStore:
         self._save()
         return self.get(session_id)
 
+    def delete(self, session_id: str) -> None:
+        self._require(session_id)
+        del self._sessions[session_id]
+        self._save()
+
     def list(self) -> list[SessionSummary]:
         items = [
             SessionSummary(

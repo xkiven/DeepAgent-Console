@@ -50,6 +50,14 @@ def create_api_router(
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+    @router.delete("/sessions/{session_id}")
+    async def delete_session(session_id: str, request: Request):
+        try:
+            request.app.state.session_store.delete(session_id)
+            return {"status": "ok", "deleted_session_id": session_id}
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
     @router.post("/chat/stream")
     async def chat_stream(payload: ChatRequest, request: Request):
         async def event_stream() -> AsyncIterator[str]:
